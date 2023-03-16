@@ -42,7 +42,7 @@ function processWikiResult(result: WikiExtractResult): Promise<Metadata> {
         const safeText = result.page_title.replace(/ +/g, "_").match(/[a-z]|[A-Z]|[0-9]|-|_/g);
         let fileName: string;
         if (safeText)
-            fileName = `${safeText.join("")}.txt\``;
+            fileName = `${safeText.join("")}.txt`;
         else
             fileName = result.page_touched;
 

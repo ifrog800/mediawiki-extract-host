@@ -1,0 +1,43 @@
+html {
+    --padding-horizontal: 2vw;
+    --padding-vertical: 1vh;
+}
+
+body {
+    background-color: #F8F8FFFF;
+    padding: var(--padding-vertical) var(--padding-horizontal);
+    font-family: monospace, monospace;
+}
+
+.container {
+    padding: calc(var(--padding-vertical) / 4) calc(var(--padding-horizontal) / 4);
+}
+
+.container > h1 {
+    text-align: center;
+}
+
+table#articleSelectionTable tr:nth-child(1) td {
+    font-weight: bold;
+    text-align: center;
+}
+
+#left {
+    float: left;
+    width: 40%;
+    padding-bottom: var(--padding-horizontal);
+}
+
+#right {
+    float: right;
+    width: 60%;
+    padding-bottom: var(--padding-horizontal);
+}
+
+td {
+    padding: calc(var(--padding-vertical) / 8) calc(var(--padding-horizontal) / 8);
+}
+
+tr:hover {
+    background-color: #EDE7E7FF;
+}
