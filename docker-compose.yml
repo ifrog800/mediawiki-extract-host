@@ -1,0 +1,10 @@
+version: "3.9"
+services:
+  mediawiki-extract-host:
+    container_name: mediawiki-extract-host
+    image: mediawiki-extract-host:latest
+    build: .
+    ports:
+      - "42321:42321"
+    volumes:
+        - ./.data:/mediawiki-extract-host/.data

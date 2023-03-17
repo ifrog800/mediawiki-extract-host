@@ -1,14 +1,14 @@
 import Path from "path";
-import {mkdir, writeFile} from "fs";
+import {existsSync, mkdir, statSync, writeFile} from "fs";
 import {Database} from "sqlite3";
 
-interface WikiExtractResult {
+export interface WikiExtractResult {
     page_touched: string,
     page_title: string,
     old_text: string
 }
 
-interface Metadata {
+export interface Metadata {
     name: string,
     date: string,
     file: string
@@ -19,7 +19,7 @@ interface Metadata {
  * @param date string in the format yyyyMMddHHmmss
  * @return string in the format "MM dd, YYYY HH:mm:ss"
  */
-function parseDate(date: string): string {
+export function parseDate(date: string): string {
     const year = date.substring(0, 4);
     const month = date.substring(4, 6);
     const day = date.substring(6, 8);
@@ -30,13 +30,12 @@ function parseDate(date: string): string {
     return `${month} ${day}, ${year} ${hour}:${minute}:${second}`;
 }
 
-
 /**
  * Parses the SQL query by creating a file to store the wiki content.
  * @param result a WikiExtract formatted object
  * @return Metadata metadata associated with the entry | -1 for error
  */
-function processWikiResult(result: WikiExtractResult): Promise<Metadata> {
+export function processWikiResult(result: WikiExtractResult): Promise<Metadata> {
     return new Promise((resolve, error) => {
         const baseDir = Path.resolve(`${__dirname}/../.data/www/latest/`);
         const safeText = result.page_title.replace(/ +/g, "_").match(/[a-z]|[A-Z]|[0-9]|-|_/g);
@@ -65,7 +64,7 @@ function processWikiResult(result: WikiExtractResult): Promise<Metadata> {
                     name: result.page_title,
                     date: parseDate(result.page_touched),
                     file: fileName
-                })
+                });
             });
         });
     });
@@ -74,42 +73,52 @@ function processWikiResult(result: WikiExtractResult): Promise<Metadata> {
 /**
  * Main entrypoint for dumping the mediawiki sqlite database.
  * @param path String of PathLike pointing to the sqlite database file.
+ * @return Promise<boolean> returns true
  */
-function main(path: string) {
-    console.info(`${new Date()} | Start of extractor.ts`);
-    // from https://superuser.com/a/827230
-    const SQL = `
-    SELECT page_touched, page_title, old_text
-    FROM page
-    JOIN revision ON page_latest = rev_id
-    JOIN text ON rev_text_id = old_id`
+export function extractorMain(path: string): Promise<boolean> {
+    return new Promise((resolve, error) => {
+        console.info(`${new Date()} | Start of extractor.ts`);
 
-    const resultingMetadata: Metadata[] = [];
-    const db = new Database(path);
-
-    db.all(SQL, async (err: Error, rows: WikiExtractResult[]) => {
-        if (err)
-            throw err;
-        for (let i = 0; i < rows.length; i++) {
-            const tmp = await processWikiResult(rows[i])
-                .then((res) => {
-                    resultingMetadata.push(res);
-                })
-                .catch(console.error);
+        if (!existsSync(Path.resolve(path))) {
+            console.error(`${new Date()} | Database does not exist.`);
+            console.error(`${new Date()} | Expecting "wiki.sqlite" in the ".data/" directory.`);
+            error(new Error("Sqlite database is missing"));
+            return;
         }
 
-        const metadataFileLocation = Path.resolve(`${__dirname}/../.data/www/data.json`)
-        writeFile(metadataFileLocation, JSON.stringify(resultingMetadata), (err) => {
-            if (err) {
-                console.error(`${new Date()} | ERROR saving metadata to ${metadataFileLocation}`);
-                console.error(err);
+        // from https://superuser.com/a/827230
+        const SQL = `
+SELECT page_touched, page_title, old_text
+FROM page
+JOIN revision ON page_latest = rev_id
+JOIN text ON rev_text_id = old_id`
+
+        const resultingMetadata: Metadata[] = [];
+        const db = new Database(path);
+
+        db.all(SQL, async (err: Error, rows: WikiExtractResult[]) => {
+            if (err)
+                error(err);
+            for (let i = 0; i < rows.length; i++) {
+                const tmp = await processWikiResult(rows[i])
+                    .then((res) => {
+                        resultingMetadata.push(res);
+                    })
+                    .catch(console.error);
             }
+
+            const metadataFileLocation = Path.resolve(`${__dirname}/../.data/www/data.json`)
+            writeFile(metadataFileLocation, JSON.stringify(resultingMetadata), (err) => {
+                if (err) {
+                    console.error(`${new Date()} | ERROR saving metadata to ${metadataFileLocation}`);
+                    console.error(err);
+                    error(err);
+                }
+                resolve(true);
+            });
         });
+
+        db.close();
+        console.info(`${new Date()} | End of extractor.ts`);
     });
-
-    db.close();
-    console.info(`${new Date()} | End of extractor.ts`);
 }
-
-
-main(`${__dirname}/../.data/wiki.sqlite`);

@@ -2,13 +2,6 @@
 const table = document.getElementById("articleList");
 let DATA = null;
 
-for (let i = 0; i < 1110; i++) {
-    const frag = document.createElement("tr");
-    frag.textContent = "link" + i;
-    // table.appendChild(frag);
-}
-
-
 async function main() {
     await fetch("/data.json")
         .then(data => {
